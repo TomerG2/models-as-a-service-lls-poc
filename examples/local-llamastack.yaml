@@ -1,0 +1,20 @@
+# Example: Local LlamaStack deployment
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: llamastack-config
+  namespace: default
+data:
+  endpoint: "http://llamastack-service.llamastack:8000"
+  log-level: "info"
+  enable-auth: "false"  # No auth for local development
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: llamastack-credentials
+  namespace: default
+type: Opaque
+stringData:
+  api-key: ""  # No API key needed for local deployment

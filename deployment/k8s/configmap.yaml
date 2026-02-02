@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: llamastack-config
+  namespace: default
+  labels:
+    app: llamastack-adapter
+    component: config
+data:
+  # Replace with your actual LlamaStack endpoint
+  endpoint: "https://your-llamastack-instance.example.com"
+
+  # Additional configuration can be added here
+  log-level: "info"
+  enable-auth: "true"

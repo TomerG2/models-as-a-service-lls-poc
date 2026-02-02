@@ -1,0 +1,42 @@
+# Example: Cloud-hosted LlamaStack deployment
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: llamastack-config
+  namespace: default
+data:
+  endpoint: "https://api.llamastack.example.com"
+  log-level: "info"
+  enable-auth: "true"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: llamastack-credentials
+  namespace: default
+type: Opaque
+stringData:
+  # Replace with your actual LlamaStack API key
+  api-key: "ll-your-llamastack-api-key-here"
+
+---
+# Optional: Network policy for external access
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: llamastack-adapter-egress
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: llamastack-adapter
+  policyTypes:
+  - Egress
+  egress:
+  - to: []  # Allow all egress for external LlamaStack
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80

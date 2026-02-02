@@ -28,5 +28,36 @@ go.work.sum
 .env
 
 # Editor/IDE
-# .idea/
-# .vscode/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Build artifacts
+bin/
+dist/
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Local environment files
+.env.local
+.env.*.local
+
+# Kubernetes secrets (should not be committed)
+deployment/k8s/secret-*.yaml
+deployment/k8s/*-secret.yaml
+
+# Temporary files
+*.tmp
+*.temp
+
+# Log files
+*.log

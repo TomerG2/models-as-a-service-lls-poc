@@ -1,0 +1,37 @@
+apiVersion: serving.kserve.io/v1alpha1
+kind: LLMInferenceService
+metadata:
+  name: llamastack-adapter
+  namespace: default
+  annotations:
+    # MaaS metadata enrichment
+    opendatahub.io/genai-use-case: "external-llm"
+    openshift.io/description: "LlamaStack external LLM integration adapter"
+    openshift.io/display-name: "LlamaStack Models"
+spec:
+  # Model specification for MaaS discovery
+  model:
+    name: llamastack-models
+    uri: external://llamastack
+
+  # Router configuration - connects to MaaS gateway
+  router:
+    gateway:
+      refs:
+        - name: maas-default-gateway
+          namespace: openshift-ingress
+
+  # Since this is an external adapter, we don't need template spec
+  # The actual pods are managed by the Deployment above
+
+status:
+  # This will be populated by the operator
+  # For manual setup, you may need to patch this
+  url: "http://llamastack-adapter.default.svc.cluster.local:8080"
+  address:
+    url: "http://llamastack-adapter.default.svc.cluster.local:8080"
+  conditions:
+  - type: Ready
+    status: "True"
+    reason: ServiceReady
+    message: "LlamaStack adapter service is ready"
