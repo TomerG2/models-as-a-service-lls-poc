@@ -3,6 +3,7 @@
 # test-maas-functionality.sh - Test MaaS (Models-as-a-Service) functionality
 #
 # This script tests the core MaaS platform functionality including:
+# - Authentication enforcement (401 checks)
 # - Authentication (token generation)
 # - Models API (discovery)
 # - Model inference (chat completions)
@@ -178,6 +179,60 @@ test_model_inference() {
     return 0
 }
 
+# Test authentication enforcement - token endpoint
+test_unauthenticated_token_endpoint() {
+    log_info "Testing token endpoint without authentication (should return 401)..."
+
+    HTTP_RESPONSE=$(curl -sSk -w "\n%{http_code}" \
+        -H "Content-Type: application/json" \
+        -d "{\"expiration\": \"${TOKEN_EXPIRATION}\"}" \
+        "${MAAS_BASE_URL}/maas-api/v1/tokens" 2>/dev/null || echo "000")
+
+    HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -n1)
+    RESPONSE_BODY=$(echo "$HTTP_RESPONSE" | sed '$d')
+
+    log_info "HTTP Status Code: $HTTP_CODE"
+
+    if [[ "$HTTP_CODE" == "401" ]]; then
+        log_success "Token endpoint properly protected - unauthorized access denied"
+    else
+        log_error "Token endpoint security issue - expected 401 but got $HTTP_CODE"
+        echo "Response: $RESPONSE_BODY"
+        return 1
+    fi
+
+    return 0
+}
+
+# Test authentication enforcement - model inference endpoint
+test_unauthenticated_model_inference() {
+    local model_name="${1:-$DEFAULT_MODEL}"
+    local model_endpoint="${2:-$DEFAULT_MODEL_ENDPOINT}"
+
+    log_info "Testing model inference without authentication (should return 401)..."
+    log_info "Endpoint: ${MAAS_BASE_URL}${model_endpoint}"
+
+    HTTP_RESPONSE=$(curl -sSk -w "\n%{http_code}" \
+        -H "Content-Type: application/json" \
+        -d "{\"model\": \"${model_name}\", \"messages\": [{\"role\": \"user\", \"content\": \"Hello\"}], \"max_tokens\": ${MAX_TOKENS}}" \
+        "${MAAS_BASE_URL}${model_endpoint}" 2>/dev/null || echo "000")
+
+    HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -n1)
+    RESPONSE_BODY=$(echo "$HTTP_RESPONSE" | sed '$d')
+
+    log_info "HTTP Status Code: $HTTP_CODE"
+
+    if [[ "$HTTP_CODE" == "401" ]]; then
+        log_success "Model endpoint properly protected - unauthorized access denied"
+    else
+        log_error "Model endpoint security issue - expected 401 but got $HTTP_CODE"
+        echo "Response: $RESPONSE_BODY"
+        return 1
+    fi
+
+    return 0
+}
+
 # Main function
 main() {
     local model_name="${1:-}"
@@ -193,6 +248,19 @@ main() {
     get_cluster_info
     echo ""
 
+    # Test authentication enforcement first
+    if ! test_unauthenticated_token_endpoint; then
+        log_error "Token endpoint security test failed"
+        exit 1
+    fi
+    echo ""
+
+    if ! test_unauthenticated_model_inference; then
+        log_error "Model endpoint security test failed"
+        exit 1
+    fi
+    echo ""
+
     if ! test_authentication; then
         log_error "Authentication test failed - cannot continue"
         exit 1
@@ -205,6 +273,15 @@ main() {
     if [[ -n "$model_name" ]]; then
         # Custom model - user needs to provide endpoint
         read -p "Enter model endpoint path (e.g., /llm/model-name/v1/chat/completions): " model_endpoint
+
+        # Test unauthenticated access for custom model
+        echo ""
+        if ! test_unauthenticated_model_inference "$model_name" "$model_endpoint"; then
+            log_error "Custom model endpoint security test failed"
+            exit 1
+        fi
+        echo ""
+
         test_model_inference "$model_name" "$model_endpoint"
     else
         # Use default model
