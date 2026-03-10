@@ -1,0 +1,74 @@
+apiVersion: serving.kserve.io/v1alpha1
+kind: LLMInferenceService
+metadata:
+  name: llamastack
+  annotations:
+    alpha.maas.opendatahub.io/tiers: '[]'
+spec:
+  model:
+    uri: hf://sshleifer/tiny-gpt2 # Dummy model URI for KServe validation, ignored by Llamastack
+    name: llamastack-external-models
+  replicas: 1
+  router:
+    route: {}
+    # Connect to MaaS-enabled gateway
+    gateway:
+      refs:
+        - name: maas-default-gateway
+          namespace: openshift-ingress
+  template:
+    containers:
+      - name: main
+        image: "llamastack/distribution-starter:latest"
+        imagePullPolicy: Always
+        command: ["sh", "-c"]
+        args:
+        - |
+          CONFIG=$(python3 -c "from llama_stack.core.utils.config_resolution import resolve_config_or_distro; print(resolve_config_or_distro('starter'))")
+          python3 -c "
+          import yaml
+          with open('$CONFIG') as f:
+              config = yaml.safe_load(f)
+          config['server']['port'] = 8000
+          config['server']['tls_certfile'] = '/var/run/kserve/tls/tls.crt'
+          config['server']['tls_keyfile'] = '/var/run/kserve/tls/tls.key'
+          with open('/tmp/run-config.yaml', 'w') as f:
+              yaml.dump(config, f, default_flow_style=False)
+          "
+          exec llama stack run /tmp/run-config.yaml
+        env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+          - name: LLAMA_STACK_PORT
+            value: "8000"
+        ports:
+          - name: https
+            containerPort: 8000
+            protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /v1/health
+            port: 8000
+            scheme: HTTPS
+          initialDelaySeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /v1/health
+            port: 8000
+            scheme: HTTPS
+          initialDelaySeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 256Mi

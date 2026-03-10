@@ -1,0 +1,24 @@
+# ExternalSecret for OpenAI API key.
+#
+# Creates K8s Secret: openai-openai-api-key
+# Consumed by:        overlays/openai/patches/deployment-patch.yaml
+#
+# Vault KV path:      secret/data/llm/openai  (adjust to your layout)
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: openai-api-key
+  namespace: llm
+spec:
+  refreshInterval: 1m
+  secretStoreRef:
+    name: vault-backend
+    kind: SecretStore
+  target:
+    name: openai-openai-api-key
+    creationPolicy: Owner
+  data:
+    - secretKey: api-key
+      remoteRef:
+        key: llm/openai
+        property: api-key

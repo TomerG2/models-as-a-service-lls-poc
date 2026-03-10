@@ -1,0 +1,11 @@
+- op: add
+  path: /spec/template/containers/0/env/-
+  value:
+    name: GEMINI_API_KEY
+    valueFrom:
+      secretKeyRef:
+        name: gemini-gemini-api-key
+        key: api-key
+- op: replace
+  path: /spec/model/name
+  value: gemini-2.0-flash

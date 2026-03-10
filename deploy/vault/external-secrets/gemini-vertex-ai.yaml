@@ -1,0 +1,37 @@
+# ExternalSecret for Gemini Vertex AI credentials.
+#
+# Creates K8s Secret: gemini-vertex-ai-vertex-ai-credentials
+# Consumed by:        overlays/gemini-vertex-ai/patches/deployment-patch.yaml
+#
+# This secret contains three keys:
+#   - project              (VERTEX_AI_PROJECT env var)
+#   - location             (VERTEX_AI_LOCATION env var)
+#   - service-account.json (mounted as file for GOOGLE_APPLICATION_CREDENTIALS)
+#
+# Vault KV path:      secret/data/llm/gemini-vertex-ai  (adjust to your layout)
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: gemini-vertex-ai-credentials
+  namespace: llm
+spec:
+  refreshInterval: 1m
+  secretStoreRef:
+    name: vault-backend
+    kind: SecretStore
+  target:
+    name: gemini-vertex-ai-vertex-ai-credentials
+    creationPolicy: Owner
+  data:
+    - secretKey: project
+      remoteRef:
+        key: llm/gemini-vertex-ai
+        property: project
+    - secretKey: location
+      remoteRef:
+        key: llm/gemini-vertex-ai
+        property: location
+    - secretKey: service-account.json
+      remoteRef:
+        key: llm/gemini-vertex-ai
+        property: service-account.json
