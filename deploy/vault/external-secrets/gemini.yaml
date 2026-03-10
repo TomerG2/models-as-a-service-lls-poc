@@ -1,0 +1,24 @@
+# ExternalSecret for Gemini API key.
+#
+# Creates K8s Secret: gemini-gemini-api-key
+# Consumed by:        overlays/gemini/patches/deployment-patch.yaml
+#
+# Vault KV path:      secret/data/llm/gemini  (adjust to your layout)
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: gemini-api-key
+  namespace: llm
+spec:
+  refreshInterval: 1m
+  secretStoreRef:
+    name: vault-backend
+    kind: SecretStore
+  target:
+    name: gemini-gemini-api-key
+    creationPolicy: Owner
+  data:
+    - secretKey: api-key
+      remoteRef:
+        key: llm/gemini
+        property: api-key

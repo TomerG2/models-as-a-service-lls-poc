@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: llamastack-config
+data:
+  config.yaml: |
+    version: 2
+    image_name: starter
+    apis:
+      - inference
+    providers:
+      inference:
+        - provider_id: openai
+          provider_type: remote::openai
+          config:
+            api_key: ${env.OPENAI_API_KEY:=}
+            base_url: https://api.openai.com/v1
+    server:
+      port: 8000
+      tls_certfile: /var/run/kserve/tls/tls.crt
+      tls_keyfile: /var/run/kserve/tls/tls.key

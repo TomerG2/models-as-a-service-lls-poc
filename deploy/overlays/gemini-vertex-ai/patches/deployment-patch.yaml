@@ -1,0 +1,39 @@
+- op: add
+  path: /spec/template/containers/0/env/-
+  value:
+    name: VERTEX_AI_PROJECT
+    valueFrom:
+      secretKeyRef:
+        name: gemini-vertex-ai-vertex-ai-credentials
+        key: project
+- op: add
+  path: /spec/template/containers/0/env/-
+  value:
+    name: VERTEX_AI_LOCATION
+    valueFrom:
+      secretKeyRef:
+        name: gemini-vertex-ai-vertex-ai-credentials
+        key: location
+- op: add
+  path: /spec/template/containers/0/env/-
+  value:
+    name: GOOGLE_APPLICATION_CREDENTIALS
+    value: /var/run/secrets/gcp/service-account.json
+- op: add
+  path: /spec/template/containers/0/volumeMounts
+  value:
+    - name: gcp-sa-key
+      mountPath: /var/run/secrets/gcp
+      readOnly: true
+- op: add
+  path: /spec/template/volumes
+  value:
+    - name: gcp-sa-key
+      secret:
+        secretName: gemini-vertex-ai-vertex-ai-credentials
+        items:
+          - key: service-account.json
+            path: service-account.json
+- op: replace
+  path: /spec/model/name
+  value: gemini-2.0-flash

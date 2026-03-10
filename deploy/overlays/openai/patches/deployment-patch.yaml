@@ -1,0 +1,11 @@
+- op: add
+  path: /spec/template/containers/0/env/-
+  value:
+    name: OPENAI_API_KEY
+    valueFrom:
+      secretKeyRef:
+        name: openai-openai-api-key
+        key: api-key
+- op: replace
+  path: /spec/model/name
+  value: gpt-4o
