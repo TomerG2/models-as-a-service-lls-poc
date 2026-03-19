@@ -19,19 +19,42 @@ spec:
   template:
     containers:
       - name: main
-        image: "llamastack/distribution-starter:latest"
+        image: "quay.io/opendatahub/llama-stack:latest"
         imagePullPolicy: Always
         command: ["sh", "-c"]
         args:
         - |
-          CONFIG=$(python3 -c "from llama_stack.core.utils.config_resolution import resolve_config_or_distro; print(resolve_config_or_distro('starter'))")
           python3 -c "
           import yaml
-          with open('$CONFIG') as f:
+          with open('/opt/app-root/config.yaml') as f:
               config = yaml.safe_load(f)
           config['server']['port'] = 8000
           config['server']['tls_certfile'] = '/var/run/kserve/tls/tls.crt'
           config['server']['tls_keyfile'] = '/var/run/kserve/tls/tls.key'
+          # Switch storage from PostgreSQL to SQLite since no PG is available
+          config['storage'] = {
+              'backends': {
+                  'kv_default': {
+                      'type': 'kv_sqlite',
+                      'db_path': '/tmp/llama-stack/store.db',
+                  },
+                  'sql_default': {
+                      'type': 'sql_sqlite',
+                      'db_path': '/tmp/llama-stack/sql_store.db',
+                  },
+              },
+              'stores': config.get('storage', {}).get('stores', {}),
+          }
+          # Rewrite non-writable paths to /tmp
+          import json
+          raw = json.dumps(config)
+          raw = raw.replace('/opt/app-root/src/.llama/distributions/rh/', '/tmp/llama-stack/')
+          config = json.loads(raw)
+          # Clear pre-registered resources (models connected dynamically via remote providers)
+          config['registered_resources'] = {
+              'benchmarks': [], 'datasets': [], 'models': [],
+              'scoring_fns': [], 'shields': [], 'tool_groups': [], 'vector_dbs': [], 'vector_stores': [],
+          }
           with open('/tmp/run-config.yaml', 'w') as f:
               yaml.dump(config, f, default_flow_style=False)
           "
