@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
   - llamastack.yaml
+  - postgres.yaml
 
 labels:
   - pairs:

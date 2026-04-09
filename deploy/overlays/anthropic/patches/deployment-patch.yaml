@@ -9,3 +9,9 @@
 - op: replace
   path: /spec/model/name
   value: claude-3-5-sonnet-20241022
+- op: replace
+  path: /spec/template/containers/0/env/3/value
+  value: anthropic-postgres
+- op: replace
+  path: /spec/template/initContainers/0/env/0/value
+  value: anthropic-postgres
