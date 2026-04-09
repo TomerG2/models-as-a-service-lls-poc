@@ -9,3 +9,9 @@
 - op: replace
   path: /spec/model/name
   value: gpt-4o
+- op: replace
+  path: /spec/template/containers/0/env/3/value
+  value: openai-postgres
+- op: replace
+  path: /spec/template/initContainers/0/env/0/value
+  value: openai-postgres

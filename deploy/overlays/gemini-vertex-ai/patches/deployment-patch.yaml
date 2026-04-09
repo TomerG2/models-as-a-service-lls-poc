@@ -37,3 +37,9 @@
 - op: replace
   path: /spec/model/name
   value: gemini-2.0-flash
+- op: replace
+  path: /spec/template/containers/0/env/3/value
+  value: gemini-vertex-ai-postgres
+- op: replace
+  path: /spec/template/initContainers/0/env/0/value
+  value: gemini-vertex-ai-postgres
