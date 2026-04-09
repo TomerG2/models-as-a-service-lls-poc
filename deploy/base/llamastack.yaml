@@ -17,6 +17,26 @@ spec:
         - name: maas-default-gateway
           namespace: openshift-ingress
   template:
+    initContainers:
+      - name: wait-for-postgres
+        image: registry.redhat.io/rhel9/postgresql-15
+        command:
+          - /bin/sh
+          - -c
+          - |
+            echo "Waiting for PostgreSQL at ${POSTGRES_HOST}:${POSTGRES_PORT}..."
+            until pg_isready -h "${POSTGRES_HOST}" -p "${POSTGRES_PORT}" -U "${POSTGRES_USER}"; do
+              echo "PostgreSQL is not ready yet, retrying in 2s..."
+              sleep 2
+            done
+            echo "PostgreSQL is ready."
+        env:
+          - name: POSTGRES_HOST
+            value: postgres
+          - name: POSTGRES_PORT
+            value: "5432"
+          - name: POSTGRES_USER
+            value: admin
     containers:
       - name: main
         image: "quay.io/opendatahub/llama-stack:latest"
@@ -25,36 +45,38 @@ spec:
         args:
         - |
           python3 -c "
-          import yaml
+          import yaml, os, json
           with open('/opt/app-root/config.yaml') as f:
               config = yaml.safe_load(f)
           config['server']['port'] = 8000
           config['server']['tls_certfile'] = '/var/run/kserve/tls/tls.crt'
           config['server']['tls_keyfile'] = '/var/run/kserve/tls/tls.key'
-          # Switch storage from PostgreSQL to SQLite since no PG is available
+          # Configure PostgreSQL storage using env vars
+          pg_host = os.environ['POSTGRES_HOST']
+          pg_port = os.environ['POSTGRES_PORT']
+          pg_user = os.environ['POSTGRES_USER']
+          pg_password = os.environ['POSTGRES_PASSWORD']
+          pg_db = os.environ['POSTGRES_DB']
+          conn_string = f'postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_db}'
           config['storage'] = {
               'backends': {
                   'kv_default': {
-                      'type': 'kv_sqlite',
-                      'db_path': '/tmp/llama-stack/store.db',
+                      'type': 'kv_postgres',
+                      'connection_string': conn_string,
                   },
                   'sql_default': {
-                      'type': 'sql_sqlite',
-                      'db_path': '/tmp/llama-stack/sql_store.db',
+                      'type': 'sql_postgres',
+                      'connection_string': conn_string,
                   },
               },
               'stores': config.get('storage', {}).get('stores', {}),
           }
           # Rewrite non-writable paths to /tmp
-          import json
           raw = json.dumps(config)
           raw = raw.replace('/opt/app-root/src/.llama/distributions/rh/', '/tmp/llama-stack/')
           config = json.loads(raw)
           # Clear pre-registered resources (models connected dynamically via remote providers)
-          config['registered_resources'] = {
-              'benchmarks': [], 'datasets': [], 'models': [],
-              'scoring_fns': [], 'shields': [], 'tool_groups': [], 'vector_dbs': [], 'vector_stores': [],
-          }
+          config['registered_resources'] = {k: [] for k in config.get('registered_resources', {})}
           with open('/tmp/run-config.yaml', 'w') as f:
               yaml.dump(config, f, default_flow_style=False)
           "
@@ -72,6 +94,16 @@ spec:
                 fieldPath: metadata.namespace
           - name: LLAMA_STACK_PORT
             value: "8000"
+          - name: POSTGRES_HOST
+            value: postgres
+          - name: POSTGRES_PORT
+            value: "5432"
+          - name: POSTGRES_USER
+            value: admin
+          - name: POSTGRES_PASSWORD
+            value: password
+          - name: POSTGRES_DB
+            value: llamastack
         ports:
           - name: https
             containerPort: 8000
